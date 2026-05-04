@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>店舗タスク × AIソリューション マップ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #f0f0f0;
+    --surface: #ffffff;
+    --surface2: #f8f8f8;
+    --border: #e2e2e6;
+    --border-strong: #d0d0d8;
+    --text: #1a1a24;
+    --text-sub: #444458;
+    --text-muted: #8888a0;
+    --productivity: #0b9e72;
+    --productivity-bg: #edf9f5;
+    --productivity-border: #b6e9d8;
+    --efficiency: #2176d6;
+    --efficiency-bg: #edf4fd;
+    --efficiency-border: #b3d4f7;
+    --both: #7c5cbf;
+    --both-bg: #f3effd;
+    --both-border: #d0bef5;
+    --accent: #e05a20;
+    --accent-bg: #fef3ee;
+    --star: #e0820a;
+    --s-planned-c: #b45309; --s-planned-bg: #fffbeb; --s-planned-b: #fcd34d;
+    --s-active-c:  #1d6fb8; --s-active-bg:  #eff6ff; --s-active-b:  #93c5fd;
+    --s-done-c:    #166534; --s-done-bg:    #f0fdf4; --s-done-b:    #86efac;
+    --s-agent-c:   #7c5cbf; --s-agent-bg:   #f3effd; --s-agent-b:   #c4b5fd;
+    --s-review-c:  #9d174d; --s-review-bg:  #fff1f2; --s-review-b:  #fda4af;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    padding: 40px 28px;
+  }
+
+  header { margin-bottom: 36px; }
+  .header-top { display: flex; align-items: flex-start; gap: 16px; }
+  .header-mark {
+    width: 4px; height: 52px;
+    background: linear-gradient(180deg, var(--accent) 0%, #f0a060 100%);
+    border-radius: 4px; flex-shrink: 0; margin-top: 2px;
+  }
+  header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.02em; line-height: 1.35; }
+  header p { color: var(--text-muted); font-size: 12px; margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+  .legend { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .legend-label { font-size: 11px; color: var(--text-muted); margin-right: 2px; }
+  .legend-chip {
+    display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-sub);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px;
+  }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .col-header {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 16px; margin-bottom: 16px;
+    display: grid; grid-template-columns: 1fr 90px 136px; gap: 12px; align-items: center;
+  }
+  .col-header span { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+  .col-header span:not(:first-child) { text-align: center; }
+
+  .summary-bar {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 24px; margin-bottom: 28px; display: grid; grid-template-columns: repeat(3,1fr);
+  }
+  .summary-item { text-align: center; padding: 4px 0; }
+  .summary-item:not(:last-child) { border-right: 1px solid var(--border); }
+  .summary-num { font-size: 32px; font-weight: 700; font-family: 'DM Mono', monospace; line-height: 1; }
+  .summary-label { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+  .section { margin-bottom: 28px; }
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .section-num {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: var(--accent);
+    background: var(--accent-bg); border: 1px solid #f0c8b0; padding: 2px 9px;
+    border-radius: 20px; font-weight: 500;
+  }
+  .section-title { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; color: var(--text-sub); text-transform: uppercase; }
+  .section-line { flex: 1; height: 1px; background: var(--border); }
+
+  .task-grid { display: flex; flex-direction: column; gap: 6px; }
+  .task-row {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; display: grid; grid-template-columns: 1fr 90px 136px;
+    gap: 12px; align-items: center; transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .task-row:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); border-color: var(--border-strong); }
+
+  .task-name {
+    font-size: 13px; font-weight: 500; margin-bottom: 5px; color: var(--text);
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .priority-star {
+    font-size: 11px; color: var(--star); background: #fef5e7;
+    border: 1px solid #f5d98a; border-radius: 4px; padding: 1px 6px; font-weight: 500;
+  }
+  .task-solution {
+    font-size: 11px; color: var(--text-muted); line-height: 1.7;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  }
+  .task-solution span {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+    padding: 1px 7px; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-muted);
+  }
+  .task-desc { background: none !important; border: none !important; padding: 0 !important; font-size: 11px !important; }
+
+  .effect-col { display: flex; align-items: center; justify-content: center; }
+  .badge {
+    font-size: 10px; font-family: 'DM Mono', monospace; padding: 4px 10px;
+    border-radius: 20px; font-weight: 500; white-space: nowrap; text-align: center;
+  }
+  .badge.productivity { background: var(--productivity-bg); color: var(--productivity); border: 1px solid var(--productivity-border); }
+  .badge.efficiency   { background: var(--efficiency-bg);   color: var(--efficiency);   border: 1px solid var(--efficiency-border); }
+  .badge.both         { background: var(--both-bg);         color: var(--both);         border: 1px solid var(--both-border); }
+
+  .status-col { display: flex; align-items: center; justify-content: center; }
+  .sbadge {
+    font-size: 10px; font-family: 'DM Mono', monospace; font-weight: 500;
+    padding: 4px 10px; border-radius: 20px; white-space: nowrap; text-align: center;
+  }
+  .sbadge.planned { background: var(--s-planned-bg); color: var(--s-planned-c); border: 1px solid var(--s-planned-b); }
+  .sbadge.active  { background: var(--s-active-bg);  color: var(--s-active-c);  border: 1px solid var(--s-active-b); }
+  .sbadge.done    { background: var(--s-done-bg);    color: var(--s-done-c);    border: 1px solid var(--s-done-b); }
+  .sbadge.agent   { background: var(--s-agent-bg);   color: var(--s-agent-c);   border: 1px solid var(--s-agent-b); font-size: 9px; }
+  .sbadge.review  { background: var(--s-review-bg);  color: var(--s-review-c);  border: 1px solid var(--s-review-b); }
+  .sbadge.empty   { color: var(--border-strong); border: 1px dashed var(--border); background: transparent; font-size: 9px; }
+
+  footer {
+    margin-top: 40px; padding: 16px 20px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; font-size: 11px;
+    color: var(--text-muted); font-family: 'DM Mono', monospace;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .footer-star { color: var(--star); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="header-mark"></div>
+    <div>
+      <h1>店舗タスク × AIソリューション導入マップ</h1>
+      <p>中古小売業（買取・販売）/ 効果分類：生産性向上 / 作業効率化</p>
+    </div>
+  </div>
+</header>
+
+<div class="legend">
+  <span class="legend-label">効果</span>
+  <div class="legend-chip"><div class="legend-dot" style="background:var(--productivity)"></div>生産性向上</div>
+  <div class="legend-chip"><div class="legend-dot" style="background:var(--efficiency)"></div>作業効率化</div>
+  <div class="legend-chip"><div class="legend-dot" style="background:var(--both)"></div>両方</div>
+  <div class="legend-chip" style="color:var(--star);border-color:#f5d98a;background:#fef5e7;">★ 優先候補</div>
+  <span class="legend-label" style="margin-left:8px;">社内状況</span>
+  <div class="legend-chip" style="color:var(--s-planned-c);border-color:var(--s-planned-b);background:var(--s-planned-bg);">開発予定</div>
+  <div class="legend-chip" style="color:var(--s-active-c);border-color:var(--s-active-b);background:var(--s-active-bg);">導入中</div>
+  <div class="legend-chip" style="color:var(--s-done-c);border-color:var(--s-done-b);background:var(--s-done-bg);">導入済み</div>
+  <div class="legend-chip" style="color:var(--s-agent-c);border-color:var(--s-agent-b);background:var(--s-agent-bg);font-size:10px;">エージェント検討中</div>
+  <div class="legend-chip" style="color:var(--s-review-c);border-color:var(--s-review-b);background:var(--s-review-bg);">検討中</div>
+</div>
+
+<div class="col-header">
+  <span>タスク / AIソリューション</span>
+  <span>効果分類</span>
+  <span>社内導入状況</span>
+</div>
+
+<div class="summary-bar">
+  <div class="summary-item">
+    <div class="summary-num" style="color:var(--productivity)">9</div>
+    <div class="summary-label">生産性向上</div>
+  </div>
+  <div class="summary-item">
+    <div class="summary-num" style="color:var(--efficiency)">10</div>
+    <div class="summary-label">作業効率化</div>
+  </div>
+  <div class="summary-item">
+    <div class="summary-num" style="color:var(--both)">6</div>
+    <div class="summary-label">両方に効果</div>
+  </div>
+</div>
+
+<!-- 01 買取・査定 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <span class="section-title">買取・査定</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="task-grid">
+    <div class="task-row">
+      <div>
+        <div class="task-name">商品受付・ヒアリング <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>生成AI チャット</span><span>音声認識</span><span class="task-desc">受付フォームのAI補完、ヒアリング項目の自動ガイド</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">査定（目視・状態チェック） <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>画像認識AI</span><span>マルチモーダル</span><span class="task-desc">写真から状態・グレード自動判定、査定補助</span></div>
+      </div>
+      <div class="effect-col"><span class="badge both">両方</span></div>
+      <div class="status-col"><span class="sbadge planned">G2 開発予定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">相場確認・価格参照 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>価格AI</span><span>外部データ連携</span><span class="task-desc">相場データ自動取得・推奨買取価格提示</span></div>
+      </div>
+      <div class="effect-col"><span class="badge both">両方</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">買取価格提示・交渉</div>
+        <div class="task-solution"><span>生成AI</span><span class="task-desc">価格根拠の自動説明文生成、スタッフ支援</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge planned">G2 開発予定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">伝票入力・支払い処理</div>
+        <div class="task-solution"><span>RPA</span><span>OCR</span><span class="task-desc">伝票の自動入力、二重入力排除</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 02 商品化・入力 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <span class="section-title">商品化・入力</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="task-grid">
+    <div class="task-row">
+      <div>
+        <div class="task-name">クリーニング・動作確認</div>
+        <div class="task-solution"><span>チェックリストAI</span><span class="task-desc">作業手順の自動ガイド、抜け漏れ検知支援</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">値付け・ラベル発行 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>価格AI</span><span>自動印字</span><span class="task-desc">AI推奨価格に基づく自動ラベル発行</span></div>
+      </div>
+      <div class="effect-col"><span class="badge both">両方</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">商品マスタ登録・JAN照合 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>OCR</span><span>画像認識</span><span>生成AI</span><span class="task-desc">バーコード・画像から自動登録、マスタ不一致の補完</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">陳列・棚割り</div>
+        <div class="task-solution"><span>需要予測AI</span><span class="task-desc">売れ筋・回転率に基づく棚割り提案</span></div>
+      </div>
+      <div class="effect-col"><span class="badge productivity">生産性向上</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 03 販売・接客 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <span class="section-title">販売・接客</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="task-grid">
+    <div class="task-row">
+      <div>
+        <div class="task-name">レジ・会計</div>
+        <div class="task-solution"><span>セルフレジ</span><span>キャッシュレスAI</span><span class="task-desc">スキャン精度向上、決済自動化（既存POS連携）</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge active">G2 導入中</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">問い合わせ対応 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>AIチャットボット</span><span>生成AI</span><span class="task-desc">在庫確認・よくある質問の自動応答</span></div>
+      </div>
+      <div class="effect-col"><span class="badge both">両方</span></div>
+      <div class="status-col"><span class="sbadge agent">エージェント検討中</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">取り置き・予約管理</div>
+        <div class="task-solution"><span>自動通知AI</span><span class="task-desc">期限管理・顧客通知の自動化</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 04 在庫・売場管理 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <span class="section-title">在庫・売場管理</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="task-grid">
+    <div class="task-row">
+      <div>
+        <div class="task-name">棚卸し・在庫確認 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>画像認識</span><span>RFID連携</span><span class="task-desc">カメラによる在庫自動スキャン・差異検出</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">売場変更・フェイスアップ</div>
+        <div class="task-solution"><span>需要予測AI</span><span class="task-desc">売上データから売場変更タイミング提案</span></div>
+      </div>
+      <div class="effect-col"><span class="badge productivity">生産性向上</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">欠品・過剰在庫対応 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>需要予測AI</span><span>アラート自動化</span><span class="task-desc">在庫水準の異常を自動検知・アラート</span></div>
+      </div>
+      <div class="effect-col"><span class="badge both">両方</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 05 店舗運営・管理 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <span class="section-title">店舗運営・管理</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="task-grid">
+    <div class="task-row">
+      <div>
+        <div class="task-name">開閉店作業</div>
+        <div class="task-solution"><span>チェックリストAI</span><span class="task-desc">抜け漏れ防止の自動ガイド・確認記録</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">日報・実績入力 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>生成AI</span><span>RPA</span><span class="task-desc">POSデータから日報自動生成・入力代行</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">シフト管理 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>シフトAI</span><span class="task-desc">需要予測・希望シフトを考慮した自動シフト生成</span></div>
+      </div>
+      <div class="effect-col"><span class="badge both">両方</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">本部への報告・連絡</div>
+        <div class="task-solution"><span>生成AI</span><span class="task-desc">報告書の自動ドラフト生成、要約・整形</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 06 社員事務申請 -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <span class="section-title">社員事務申請（必須対応）</span>
+    <div class="section-line"></div>
+  </div>
+  <div class="task-grid">
+    <div class="task-row">
+      <div>
+        <div class="task-name">休暇・勤怠申請 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>AIアシスタント</span><span>フォーム自動化</span><span class="task-desc">申請書の自動生成、承認フロー自動化</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">経費精算 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>OCR</span><span>生成AI</span><span class="task-desc">レシート読み取り・自動仕訳・申請書作成</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">社内問い合わせ・規程確認 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>RAG / 社内AI検索</span><span class="task-desc">就業規則・マニュアルをAIが即時回答</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge agent">エージェント検討中</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">各種届出・申請書作成 <span class="priority-star">★ 優先</span></div>
+        <div class="task-solution"><span>生成AI</span><span>テンプレートAI</span><span class="task-desc">申請書のドラフト自動生成、記載ミス防止</span></div>
+      </div>
+      <div class="effect-col"><span class="badge efficiency">作業効率化</span></div>
+      <div class="status-col"><span class="sbadge empty">― 未定</span></div>
+    </div>
+    <div class="task-row">
+      <div>
+        <div class="task-name">研修・マニュアル学習</div>
+        <div class="task-solution"><span>AIチュータリング</span><span class="task-desc">個人進捗に合わせた学習コンテンツ提供</span></div>
+      </div>
+      <div class="effect-col"><span class="badge productivity">生産性向上</span></div>
+      <div class="status-col"><span class="sbadge agent">エージェント検討中</span></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>BOOKOFF AI推進チーム　/ たたき台 v0.1</span>
+  <span class="footer-star">★ 優先導入候補：即効性・実現可能性を考慮</span>
+</footer>
+
+</body>
+</html>
