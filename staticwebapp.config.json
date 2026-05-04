@@ -1,0 +1,11 @@
+{
+  "routes": [
+    {
+      "route": "/*",
+      "allowedRoles": ["employees"]
+    }
+  ],
+  "auth": {
+    "rolesSource": "groups"
+  }
+}
